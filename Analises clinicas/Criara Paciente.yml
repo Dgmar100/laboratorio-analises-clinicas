@@ -1,0 +1,28 @@
+info:
+  name: Criara Paciente
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: http://localhost:8080/api/pacientes
+  body:
+    type: json
+    data: |-
+      {
+        "id": 1,
+        "nome": "Ana Ferreira",
+        "dataNascimento": "1992-08-14",
+        "sexo": "F",
+        "telefone": "912345678",
+        "email": "ana.ferreira@email.com",
+        "numeroUtente": "123456789"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+​
