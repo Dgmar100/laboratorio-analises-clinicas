@@ -25,3 +25,6 @@ replay_pid*
 
 demo/target/
 *.vsix
+
+# Bibliotecas locais do TomEE
+demo/src/main/tomee/lib/*.jar

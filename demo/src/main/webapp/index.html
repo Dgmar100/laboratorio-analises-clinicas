@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laboratório de Análises Clínicas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f1f5f9; color: #1e293b; }
+        header { background: #075985; color: white; padding: 24px; text-align: center; }
+        main { max-width: 1000px; margin: 25px auto; padding: 0 15px; }
+        section { background: white; padding: 22px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 8px #0001; }
+        h2 { color: #075985; }
+        input, select, button { padding: 11px; margin: 5px; border: 1px solid #cbd5e1; border-radius: 5px; }
+        input, select { max-width: 100%; }
+        button { background: #0284c7; color: white; cursor: pointer; border: 0; }
+        button:hover { background: #0369a1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background: #e0f2fe; }
+        .tabela { overflow-x: auto; }
+        #mensagem { font-weight: bold; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Laboratório de Análises Clínicas</h1>
+    <p>Sistema de Gestão de Pacientes e Análises</p>
+</header>
+
+<main>
+    <section>
+        <h2>Registar paciente</h2>
+        <form id="formPaciente">
+            <input id="nome" placeholder="Nome completo" required>
+            <input id="dataNascimento" type="date" required>
+            <select id="sexo" required>
+                <option value="">Sexo</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+            </select>
+            <input id="telefone" placeholder="Telefone">
+            <input id="email" type="email" placeholder="Email">
+            <input id="numeroUtente" placeholder="Número de utente">
+            <button type="submit">Guardar paciente</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>Pacientes registados</h2>
+        <button onclick="carregarPacientes()">Atualizar lista</button>
+        <div class="tabela">
+            <table>
+                <thead><tr><th>ID</th><th>Nome</th><th>Telefone</th><th>N.º utente</th></tr></thead>
+                <tbody id="listaPacientes"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section>
+        <h2>Solicitar análise clínica</h2>
+        <form id="formAnalise">
+            <select id="pacienteId" required>
+                <option value="">Selecionar paciente</option>
+            </select>
+            <input id="tipoAnalise" placeholder="Ex.: Hemograma" required>
+            <input id="dataPedido" type="date" required>
+            <input id="resultado" placeholder="Resultado (opcional)">
+            <select id="estado">
+                <option value="Pendente">Pendente</option>
+                <option value="Em processamento">Em processamento</option>
+                <option value="Concluída">Concluída</option>
+            </select>
+            <button type="submit">Guardar análise</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>Análises registadas</h2>
+        <button onclick="carregarAnalises()">Atualizar lista</button>
+        <div class="tabela">
+            <table>
+                <thead><tr><th>ID</th><th>Paciente</th><th>Análise</th><th>Estado</th><th>Resultado</th></tr></thead>
+                <tbody id="listaAnalises"></tbody>
+            </table>
+        </div>
+    </section>
+    <p id="mensagem" role="status"></p>
+</main>
+
+<script>
+const api = "/api";
+
+function mensagem(texto, erro = false) {
+    const elemento = document.getElementById("mensagem");
+    elemento.textContent = texto;
+    elemento.style.color = erro ? "#b91c1c" : "#15803d";
+}
+
+async function pedido(url, opcoes) {
+    const resposta = await fetch(url, opcoes);
+    if (!resposta.ok) {
+        const detalhe = await resposta.text();
+        throw new Error("HTTP " + resposta.status + ": " + detalhe.substring(0, 150));
+    }
+    return resposta;
+}
+
+function adicionarLinha(tabela, valores) {
+    const linha = document.createElement("tr");
+    valores.forEach(valor => {
+        const celula = document.createElement("td");
+        celula.textContent = valor ?? "";
+        linha.appendChild(celula);
+    });
+    tabela.appendChild(linha);
+}
+
+async function carregarPacientes() {
+    try {
+        const resposta = await pedido(api + "/pacientes");
+        const pacientes = await resposta.json();
+        const tabela = document.getElementById("listaPacientes");
+        const seletor = document.getElementById("pacienteId");
+        tabela.replaceChildren();
+        seletor.replaceChildren(new Option("Selecionar paciente", ""));
+
+        pacientes.forEach(p => {
+            adicionarLinha(tabela, [p.id, p.nome, p.telefone, p.numeroUtente]);
+            seletor.add(new Option(p.nome + " (ID " + p.id + ")", p.id));
+        });
+    } catch (erro) {
+        mensagem("Erro ao carregar pacientes: " + erro.message, true);
+    }
+}
+
+async function carregarAnalises() {
+    try {
+        const resposta = await pedido(api + "/analises");
+        const analises = await resposta.json();
+        const tabela = document.getElementById("listaAnalises");
+        tabela.replaceChildren();
+
+        analises.forEach(a => {
+            adicionarLinha(tabela, [
+                a.id, a.paciente?.nome, a.tipoAnalise, a.estado, a.resultado
+            ]);
+        });
+    } catch (erro) {
+        mensagem("Erro ao carregar análises: " + erro.message, true);
+    }
+}
+
+document.getElementById("formPaciente").addEventListener("submit", async evento => {
+    evento.preventDefault();
+    const paciente = {
+        nome: document.getElementById("nome").value,
+        dataNascimento: document.getElementById("dataNascimento").value,
+        sexo: document.getElementById("sexo").value,
+        telefone: document.getElementById("telefone").value,
+        email: document.getElementById("email").value,
+        numeroUtente: document.getElementById("numeroUtente").value
+    };
+    try {
+        await pedido(api + "/pacientes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(paciente)
+        });
+        evento.target.reset();
+        mensagem("Paciente registado com sucesso!");
+        await carregarPacientes();
+    } catch (erro) {
+        mensagem("Erro ao registar paciente: " + erro.message, true);
+    }
+});
+
+document.getElementById("formAnalise").addEventListener("submit", async evento => {
+    evento.preventDefault();
+    const analise = {
+        paciente: { id: Number(document.getElementById("pacienteId").value) },
+        tipoAnalise: document.getElementById("tipoAnalise").value,
+        dataPedido: document.getElementById("dataPedido").value,
+        resultado: document.getElementById("resultado").value,
+        estado: document.getElementById("estado").value
+    };
+    try {
+        await pedido(api + "/analises", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(analise)
+        });
+        evento.target.reset();
+        mensagem("Análise registada com sucesso!");
+        await carregarAnalises();
+    } catch (erro) {
+        mensagem("Erro ao registar análise: " + erro.message, true);
+    }
+});
+
+carregarPacientes();
+carregarAnalises();
+</script>
+</body>
+</html>
